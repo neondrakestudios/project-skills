@@ -1,0 +1,17 @@
+{
+  "name": "neondrake",
+  "displayName": "Neon Drake Project Skills",
+  "version": "0.1.0",
+  "description": "Project skills for the Neon Drake context system: a two-vault layout (agent context in context/, documentation in docs/) and a self-contained CLAUDE.md. Includes scaffold-project, which sets a repo up with stack-specific conventions.",
+  "author": {
+    "name": "Brian Cupples"
+  },
+  "license": "BSD-3-Clause",
+  "keywords": [
+    "scaffold",
+    "claude-md",
+    "obsidian",
+    "context",
+    "adr"
+  ]
+}

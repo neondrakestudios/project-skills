@@ -1,0 +1,34 @@
+# Solution folders, and the repo files each one lists. Patterns are globs from the
+# repo root; a pattern that matches nothing is skipped.
+Build:
+  - compose.yaml
+  - compose.*.yaml
+  - docker-compose*.yml
+  - "**/Dockerfile"
+  - .dockerignore
+  - .github/workflows/*.yml
+  - azure-pipelines.yml
+  - buildspec.yml
+Deploy:
+  - dapr.yaml
+  - "**/dapr-components.yaml"
+  - "**/kustomization.yaml"
+  - "**/deployment.yaml"
+  - "**/service.yaml"
+  - "**/network-policy.yaml"
+  - "deploy/**"
+  - "k8s/**"
+Documentation:
+  - CLAUDE.md
+  - README.md
+  - "docs/**"
+git:
+  - .gitattributes
+  - .gitignore
+Solution Config:
+  - .editorconfig
+  - global.json
+  - Directory.Build.props
+  - Directory.Build.targets
+  - Directory.Packages.props
+  - nuget.config
