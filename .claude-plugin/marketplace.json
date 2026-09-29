@@ -1,0 +1,13 @@
+{
+  "name": "neondrake",
+  "description": "Neon Drake's Claude Code plugins for its context system.",
+  "owner": {
+    "name": "Brian Cupples"
+  },
+  "plugins": [
+    {
+      "name": "project-skills",
+      "source": "."
+    }
+  ]
+}

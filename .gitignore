@@ -1,0 +1,7 @@
+# Obsidian: per-user UI state (shared vault settings are committed)
+context/.obsidian/workspace*
+docs/.obsidian/workspace*
+context/.obsidian/cache
+docs/.obsidian/cache
+context/.trash/
+docs/.trash/
