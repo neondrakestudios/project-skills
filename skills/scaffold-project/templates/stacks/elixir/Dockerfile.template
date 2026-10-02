@@ -1,0 +1,24 @@
+# Build arguments a pipeline can override.
+ARG BUILD_CONFIGURATION=prod
+ARG APP_VERSION=1.0.0
+
+FROM docker.io/hexpm/elixir:{{container_elixir_tag}} AS build
+ARG BUILD_CONFIGURATION
+ENV MIX_ENV=$BUILD_CONFIGURATION
+RUN apk add --no-cache build-base git
+WORKDIR /app
+RUN mix local.hex --force && mix local.rebar --force
+COPY mix.exs mix.lock* ./
+RUN mix deps.get --only $MIX_ENV && mix deps.compile
+COPY . .
+RUN mix release
+
+FROM docker.io/library/alpine:{{container_alpine_version}} AS final
+ARG BUILD_CONFIGURATION
+ARG APP_VERSION
+LABEL org.opencontainers.image.version=$APP_VERSION
+RUN apk add --no-cache libstdc++ openssl ncurses-libs && adduser -D -h /app -u 10001 app
+WORKDIR /app
+COPY --from=build --chown=app:app /app/_build/$BUILD_CONFIGURATION/rel/{{container_app}} ./
+USER app
+CMD ["bin/{{container_app}}", "start"]

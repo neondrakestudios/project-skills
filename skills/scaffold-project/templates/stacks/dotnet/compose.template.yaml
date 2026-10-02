@@ -1,0 +1,9 @@
+  {{container_service}}:
+    image: {{container_service}}:${APP_VERSION:-1.0.0}
+    build:
+      context: .
+      dockerfile: {{container_dockerfile}}
+      args:
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
+        APP_VERSION: ${APP_VERSION:-1.0.0}
+{{container_ports}}

@@ -11,7 +11,7 @@ Rewritten in place; never appended to. Keep each section under ~10 lines — any
 | Next | The few things queued after the current focus |
 
 ## Focus
-First release, 0.1.0: the `scaffold-project` skill with the stack overlays in `skills/scaffold-project/templates/stacks/`, installable as `project-skills@neondrake`.
+Release 0.2.0 of the `scaffold-project` skill (installable as `project-skills@neondrake`): git repository and work-branch setup, the generators-first rule, and container support for every stack, on top of the stack overlays in `skills/scaffold-project/templates/stacks/`.
 
 ## In flight
 None yet.
@@ -24,6 +24,8 @@ None yet.
 - Neither vault's Obsidian settings have been confirmed by opening them in Obsidian.
 - If generators are declined, running `dotnet new gitignore` later needs `--force`, which drops the Obsidian lines; a re-run adds them back.
 - A generated Session start checks PRs against the integration branch when there is one; untested.
+- Repository and work-branch setup has only been dry-run; its prompts need an interactive run.
+- Container templates for every stack are verified by hand with podman, not yet through the skill; Phoenix's official container generator is untested.
 - Only `dotnet` has a full set of written conventions; `javascript` and `typescript` have only the Fastify rule, and the rest are placeholders.
 - The `aspire` and `dapr` generator sequences have not run through the skill. Run by hand, the Aspire commands succeed, but the AppHost build needs the Aspire CLI, which isn't installed here.
 

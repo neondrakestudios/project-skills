@@ -5,7 +5,7 @@
 - Slots are `{{name}}`, filled by the skill from evidence. Every slot a template uses must be listed in step 6 of `SKILL.md`, or be a stack slot prefixed with its stack name, like `{{dotnet_startup_project}}`.
 - `context/` templates stay frontmatter-light; `docs/` templates may carry frontmatter.
 - The stack list is the directory listing of `templates/stacks/`. Never write a list of stacks anywhere else.
-- An overlay never contains a project file — no `.csproj`, `package.json`, solution, lockfile or CI workflow. Record the generator command in `stack.md` instead.
+- Only hand-generate a project file when no official generator is available. Where one exists, record its command in `stack.md`; where none does, bundle an opt-in template and say why in the stack's notes, as the .NET container files do.
 
 ## Skills
 - `SKILL.md` frontmatter follows the current Claude Code skills reference; check it before adding a field. The `scaffold-project` description is fixed text — never paraphrase it. It is quoted because it contains `: `.
