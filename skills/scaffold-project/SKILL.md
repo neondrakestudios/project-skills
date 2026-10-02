@@ -1,7 +1,7 @@
 ---
 name: scaffold-project
 description: "Scaffold a new or existing repo to follow the Neon Drake context system: two-vault context and documentation, CLAUDE.md, and stack-specific conventions. Offers to run the ecosystem's own generator; does not generate project files itself."
-argument-hint: "[stacks=a,b|none] [org=OWNER/REPO|PATH|none] [generate=yes|no] [dry-run]"
+argument-hint: "[stacks=a,b|none] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]"
 allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/dump-templates.sh *)
 ---
 
@@ -23,16 +23,16 @@ Each file appears under a `=== FILE path ===` line within its `=== LAYER dir ===
 
 These override anything below that seems to conflict.
 
-- **Never overwrite.** Nothing already in a file is ever changed or removed. An existing file only gains the additions step 7 lists; everything else about it is reported, not resolved.
+- **Never overwrite.** Nothing already in a file is ever changed or removed. An existing file only gains the additions step 8 lists; everything else about it is reported, not resolved.
 - **Idempotent.** A second run with the same inputs changes nothing and says so.
-- **No project files.** Never write a `.csproj`, `package.json`, solution file, lockfile, CI workflow or any file a stack's own generator produces. The only edits to such files are the additions a stack's notes define (step 7). Offer the generator; if declined, list the command in the report.
+- **Generators first.** Only hand-generate a project file when no official generator is available — none exists, or none can run without an interactive terminal. Where one exists, offer it; if declined, list its command in the report, and never write that file yourself. A hand-generated file comes from a template a stack bundles, is written only after the user says yes, and never replaces an existing file — the .NET container files are the case today. Edits to generator-produced files are limited to the additions a stack's notes define (step 8).
 - **Self-contained output.** Generated files never reference the home directory, this plugin, or `@` imports. Everything a teammate or CI agent needs is in the repo.
 - **No logs.** Never create session logs, transcripts, changelogs or a `.session/` folder.
 - **No /init.** Do this survey yourself; do not invoke or imitate the built-in command's output.
 
 ## 1. Detect
 
-Work at the git root (`git rev-parse --show-toplevel`), else the current directory. Record:
+Work at the git root (`git rev-parse --show-toplevel`). If the directory isn't a git repository, step 5 offers to initialize it; until then, work in the current directory. Record:
 
 - Whether `CLAUDE.md`, `context/`, `docs/`, `.gitignore`, `README*` and `.claude/context-templates/` exist.
 - **Empty or not.** The repo is *empty* when it has no file outside `.git/`, `.claude/`, `context/`, `docs/`, other dot-directories (`.github/`, `.vscode/`, `.idea/`…), `CLAUDE.md`, `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` and `.editorconfig`.
@@ -80,42 +80,77 @@ Resolution:
 
 ## 3. Dry run
 
-With `dry-run`, stop after this step: ask nothing, run no generator, write nothing. Produce the step 8 report describing what would be created, appended and skipped, plus the questions that would be asked and the generators that would be offered.
+With `dry-run`, stop after this step: ask nothing, change no git state, run no generator, write nothing. Produce the step 10 report describing what would be created, appended and skipped, the git changes and branch names that would be proposed, the questions that would be asked and the generators that would be offered.
 
-## 4. Offer generators
+## 4. Git workflow
 
-Only on a repo that is empty and not scaffolded. Do this before writing any file: generators refuse non-empty directories and write their own `.gitignore`.
+Fills `{{git_workflow}}`. Skip this step on a scaffolded repo — never re-interview on a re-run. Also skip it when `CLAUDE.md` already has a git section: a `##` heading that matches `Git workflow and branching` (see matching in step 8) or contains `git`, `branch`, `branches` or `branching` as a whole word. `## GitHub Actions` is not a git section. That heading counts as the match for the template's git section in step 8, so the template section is not appended beside it.
+
+Otherwise, if a resolved org or project layer has `git-workflow.md` at its root, use it verbatim as the section and record it in provenance. If not, run the interview in `${CLAUDE_SKILL_DIR}/git-workflow.md`: infer first, ask only what evidence leaves open, then write the section as that file describes.
+
+## 5. Repository and work branch
+
+Make the repository match the git workflow from step 4, or the existing git section, and put the work on a work branch. The *long-lived branches* are the default branch, the integration branch when it differs, and any other permanent branch the workflow names, such as a release branch. Only add: never rename, delete, reset, force or push, and never add a remote. Ask before each change below; when you cannot ask, change nothing in git — and if writing would then land on a long-lived branch, stop before writing and report what's needed.
+
+**New repository** (no commits yet, or not a git repository):
+
+1. **Initialize** with `git init -b DEFAULT`, using the workflow's default branch name. On an existing repo with no commits whose unborn branch is named differently (`master` where the workflow says `main`), run `git symbolic-ref HEAD refs/heads/DEFAULT`.
+2. **Identity.** If `git config user.name` or `git config user.email` returns nothing at any scope, ask for the value and set it for this repository only. Never change global or system config, and never replace a value already set.
+3. **Default branch:** create an empty `.gitignore` and commit it as `Initial commit`. A branch can't exist, or be pushed, without a commit.
+4. **Integration branch:** create it from the default branch (`git switch -c INTEGRATION`). Write the project `.gitignore` — described below — and commit it as `Add .gitignore`. When the default branch is the integration branch, this commit goes there. Create any other long-lived branch from the default branch with `git branch NAME DEFAULT`.
+
+**Existing repository** (has commits): apply the identity check from item 2 above. Create each missing long-lived branch locally from the default branch, or track it with `git branch --track NAME origin/NAME` when it exists only on the remote. On a scaffolded repo, ask nothing here; list anything missing under "Needs your decision".
+
+**Work branch** — just before the first write of the run, whether generator output or a file. A run that ends up writing nothing needs no branch.
+
+- If the working tree has uncommitted changes, stop and ask.
+- On a long-lived branch: create the work branch from the integration branch, named by the workflow's pattern for new work, with `scaffold-project` as the description — `feature/SR-1892-scaffold-project`, or `feature/scaffold-project` when the workflow uses no tickets. When the pattern needs a ticket, take it from the `ticket=` argument or ask for it.
+- Already on a work branch: follow the workflow — ask whether to use it or to branch from the integration branch.
+- A workflow without work branches writes on the integration branch.
+
+**Project `.gitignore`.** Concatenate, in this order, each block under a `# --- SOURCE ---` header:
+
+1. The `github/gitignore` templates named in the chosen stacks' `gitignore` fields, each fetched once from `https://raw.githubusercontent.com/github/gitignore/main/NAME`. If a fetch fails, leave that block out and report it.
+2. The resolved `gitignore-ide` template.
+
+On an existing repo, don't rebuild `.gitignore`: step 8 appends missing lines from `gitignore-ide` and `gitignore-fragment` instead.
+
+## 6. Offer generators
+
+Only on a repo that is empty and not scaffolded, on the work branch from step 5, before any scaffold file is written: generators refuse non-empty directories. The `.gitignore` committed in step 5 is the only file present.
 
 - **Directories.** Every generator command names its target as `DIR`. With one chosen stack, `DIR` is `.`. With several, first ask where each lives, because two generators writing to the root collide: one stack may keep the root (a .NET solution usually does) and the others get a subdirectory such as `web/` for a front end or `api/` for a service. Substitute `DIR`, the `{{…}}` slots and any other uppercase placeholder a stack's notes define (such as `MAIN`, `TEMPLATE`, `ROLE`), asking for each value once — stacks that share a value, like the .NET namespace, share the answer. Run every command from the repo root.
 - **Choosing.** Show each stack's commands and ask which to run. Some lists are a sequence (run all), others are alternatives (pick one); the note beside each command says which. A command noted "only when X is also chosen" is dropped when X isn't.
 - **Order.** Run a stack's generators after those of every stack it `requires` or its notes say to follow — `dotnet`, then `aspire`, then `orleans`.
 - **Prerequisites.** When a stack's `stack.md` names a tool the generators need, check for it first. If it's missing, show the official install command and ask before running it; if declined, skip that stack's generators and report why.
-- **Existing files.** If a `README`, `LICENSE` or `.gitignore` already exists (a repo created on GitHub), say so before running: some generators refuse to run over them. Never add `--force`.
+- **Existing files.** If a `README`, `LICENSE` or other file already exists (a repo created on a git host), say so before running: some generators refuse to run over existing files. Never add `--force`.
 - Run the accepted commands exactly as recorded. On failure, report the output and continue. With `generate=no`, or when you cannot ask, skip and list the commands in the report.
 
-## 5. Git workflow
+**Container support.** On a repo that isn't scaffolded, after the generators, when any chosen stack supports containers — its `stack.md` lists `container_generators`, or it bundles a `Dockerfile.template` — ask once: "Add container support?" Then, in stack order:
 
-Fills `{{git_workflow}}`. Skip this step on a scaffolded repo — never re-interview on a re-run. Also skip it when `CLAUDE.md` already has a git section: a `##` heading that matches `Git workflow and branching` (see matching in step 7) or contains `git`, `branch`, `branches` or `branching` as a whole word. `## GitHub Actions` is not a git section. That heading counts as the match for the template's git section in step 7, so the template section is not appended beside it.
+- If the stack lists `container_generators`, offer them: an official generator wins over a template. Otherwise render its `Dockerfile.template`, following the stack's notes for which apps get one and how to fill the slots.
+- Every container a stack produces follows the same shape: a build stage, then a minimal Alpine runtime stage running as a non-root user, with `BUILD_CONFIGURATION` (the stack's default) and `APP_VERSION` (default `1.0.0`) build arguments, so pipelines set both the same way for every stack.
+- Assemble one `compose.yaml` at the repo root: `services:` followed by each rendered service from the stacks' `compose.template.yaml` blocks, giving each published service its own host port. With `aspire` chosen, ask first whether to add it: the AppHost already runs the app locally.
+- Assemble one `.dockerignore` at the repo root from the union of the stacks' `dockerignore.template` lines, appending only missing lines when the file exists.
+- Never replace an existing `Dockerfile` or `compose.yaml`; for an existing `compose.yaml`, list the services it lacks under "Needs your decision".
 
-Otherwise, if a resolved org or project layer has `git-workflow.md` at its root, use it verbatim as the section and record it in provenance. If not, run the interview in `${CLAUDE_SKILL_DIR}/git-workflow.md`: infer first, ask only what evidence leaves open, then write the section as that file describes.
-
-## 6. Survey and fill slots
+## 7. Survey and fill slots
 
 Slots are `{{name}}`. Fill each from evidence, in this order of preference: the repo, `gh repo view --json name,description`, the stack overlay. Never invent prose to fill a slot. A slot with no evidence becomes `TODO: <what is needed>` and goes in the report. Never invent stand-in syntax such as `<exec>`: a line that depends on an unfilled slot becomes a single `TODO:` line.
 
 - `project_name`: from step 1.
 - `summary`: first paragraph of the README, else the GitHub description, else TODO.
-- `default_branch`: the branch PRs target (also used by the PR count in step 7) — the integration branch from step 5 (or from an existing git section) when there is one, else the default branch from step 1.
+- `default_branch`: the branch PRs target (also used by the PR count in step 8) — the integration branch from step 4 (or from an existing git section) when there is one, else the default branch from step 1.
 - `stacks`: comma-separated stack directory names, or `none`.
 - `org_templates`: the org source as given, or `none`.
-- `git_workflow`: from step 5.
+- `git_workflow`: from step 4.
 - `stack_sections`: each stack's `CLAUDE.md` fragment. Where the repo exists, correct its commands and layout against what is actually there — the real startup project, test projects, scripts. When a stack lives in a subdirectory, start its section with a `- Location: \`DIR/\`` line and write its commands as run from there.
 - `layout`: the top two levels of the tree, excluding `context/` and `docs/`, one line each. On an empty repo, use the stacks' expected-layout lines and label them "expected".
 - Stack fragment slots such as `{{dotnet_startup_project}}`: from the repo, else TODO. When the stack's `stack.md` body says how to fill its slots or which lines to keep, follow it.
 
 For a new `CONVENTIONS.md` on a repo with code, replace a heading's `<!-- -->` guidance line with conventions you can point to evidence for (`.editorconfig`, analyzer and lint config, `Directory.Build.props`, `tsconfig.json`, consistent patterns in the code). Keep the guidance line where there is no evidence. Where a stack fragment states a concrete convention that the code contradicts — the fragment says NUnit, the test projects use xUnit — write what the code does and list the mismatch under "Needs your decision".
 
-## 7. Write
+## 8. Write
 
 Create `context/` and `docs/` at the root, never one inside the other, with each `.obsidian/` from the templates. Then, for every resolved output path:
 
@@ -123,7 +158,7 @@ Create `context/` and `docs/` at the root, never one inside the other, with each
 
 - **Missing file:** create it. Put `.gitkeep` only in directories that would otherwise be empty.
 - **Existing file:** leave it untouched and list it as skipped. The only exceptions:
-  1. `.gitignore` — collect the lines of the resolved `gitignore-fragment` not already present verbatim. If any, append them as one block at the end of the file, preceded by the fragment's header comment only when that comment isn't already in the file. Create `.gitignore` if missing.
+  1. `.gitignore` — collect the lines of the resolved `gitignore-ide` and `gitignore-fragment` not already present verbatim. If any, append them as one block at the end of the file, preceded by the fragment's header comment only when that comment isn't already in the file. Create `.gitignore` if missing.
   2. A stack being added (chosen now, absent from the recorded `**Stacks:**` line) — append its fragment to each existing target file whose text does not already contain the fragment's first heading, insert its `CLAUDE.md` fragment at the end of the section holding the `**Stacks:**` line, and add the stack to that line.
   3. An existing `CLAUDE.md` that is not scaffolded, as described next.
   4. Additions a chosen stack's `stack.md` notes define for a file the stack's tools own, such as .NET solution items. Apply them on every run, only ever adding entries, and report what was added.
@@ -137,16 +172,21 @@ Create `context/` and `docs/` at the root, never one inside the other, with each
 
 Before finishing, grep every file you wrote for `~/`, `$HOME`, `/home/`, `/Users/`, `@~`, and `[[` under `context/`. Fix any hit in output you created; report hits in files you did not create.
 
-## 8. Report
+## 9. Commit
+
+Offer to commit everything this run wrote, including generator output, on the work branch from step 5 — as `TICKET Scaffold project` when the workflow uses tickets, else `Scaffold project`. Never push or open a pull request; the report gives the commands. These are the only commits the skill makes: the two in step 5 and this one.
+
+## 10. Report
 
 Print, in this order, omitting empty sections:
 
 1. **Stacks** — each with how it was determined (recorded, argument, inferred from `<file>`, asked).
 2. **Git workflow** — each value and how it was determined (existing section, override file, inferred from `<evidence>`, asked).
-3. **Created** — new paths. A new file is listed here only, however many layers contributed to it; its contributors are in Provenance.
-4. **Appended** — existing files that received additions, with what was added. Never a file this run created.
-5. **Skipped** — existing paths left untouched.
-6. **Needs your decision** — conflicts, missing or differing sections, TODO slots, stacks inferred but not recorded, generators not run and their commands.
-7. **Provenance** — a table of every output path and its contributors, with each layer's location: bundle path and plugin version (from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`), org source and SHA, project path.
+3. **Repository** — identity, branches created or tracked, the work branch, each commit made, the current branch, and the push commands for every new branch plus the pull request to open from the work branch into the integration branch.
+4. **Created** — new paths. A new file is listed here only, however many layers contributed to it; its contributors are in Provenance.
+5. **Appended** — existing files that received additions, with what was added. Never a file this run created.
+6. **Skipped** — existing paths left untouched.
+7. **Needs your decision** — conflicts, missing or differing sections, TODO slots, stacks inferred but not recorded, generators not run and their commands.
+8. **Provenance** — a table of every output path and its contributors, with each layer's location: bundle path and plugin version (from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json`), org source and SHA, project path.
 
-Then stop. Do not commit.
+Then stop. Never push or open a pull request.

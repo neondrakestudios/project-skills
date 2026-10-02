@@ -1,0 +1,25 @@
+# Build arguments a pipeline can override.
+ARG BUILD_CONFIGURATION=Release
+ARG APP_VERSION=1.0.0
+
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:{{dotnet_version}} AS build
+ARG BUILD_CONFIGURATION
+ARG APP_VERSION
+ARG TARGETARCH
+WORKDIR /src
+
+# Restore as its own layer: only package and project files are copied first.
+{{container_restore_copies}}
+RUN dotnet restore "{{container_project_path}}" --os {{container_os}} -a $TARGETARCH -p:PublishReadyToRun=true
+
+COPY . .
+RUN dotnet publish "{{container_project_path}}" -c $BUILD_CONFIGURATION -o /app/publish --no-restore --os {{container_os}} -a $TARGETARCH -p:Version=$APP_VERSION -p:UseAppHost=false -p:PublishReadyToRun=true
+
+FROM mcr.microsoft.com/dotnet/{{container_runtime_image}} AS final
+ARG APP_VERSION
+LABEL org.opencontainers.image.version=$APP_VERSION
+WORKDIR /app
+{{container_expose}}
+COPY --from=build /app/publish .
+{{container_user}}
+ENTRYPOINT ["dotnet", "{{container_assembly}}.dll"]

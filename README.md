@@ -28,13 +28,16 @@ The plugin loads in place from the clone: edits take effect at the next session 
 ## scaffold-project
 
 ```
-/neondrake:scaffold-project [stacks=a,b|none] [org=OWNER/REPO|PATH|none] [generate=yes|no] [dry-run]
+/neondrake:scaffold-project [stacks=a,b|none] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]
 ```
 
 - `stacks=` — stack overlays to apply. Adds to any already recorded in `CLAUDE.md`; never removes.
 - `org=` — an org override source, a GitHub repo or local path. Recorded in `CLAUDE.md` so re-runs and teammates use the same one.
+- `ticket=` — the ticket for the scaffold's work branch, when the branch pattern needs one.
 - `generate=no` — don't offer the stack's own generator (`dotnet new`, `ng new`, …).
 - `dry-run` — report what would happen; ask nothing, run nothing, write nothing.
+
+It also sets up git to match the workflow, asking before each change and never pushing. A new repo gets an empty `.gitignore` commit on `main`, and an integration branch such as `dev` with the project `.gitignore`: the stacks' [github/gitignore](https://github.com/github/gitignore) templates plus JetBrains rules that keep shared IDE settings. Repo-only identity is set if none exists. The scaffold itself is written on a work branch off the integration branch — pass `ticket=KEY-123` when the branch pattern needs one — and offered as one commit for a pull request.
 
 Re-running is safe: existing files are never overwritten. Missing files are added, and differences from the current templates are reported for you to resolve.
 
@@ -71,7 +74,7 @@ stacks/NAME/
 └── docs/…                   extra docs folders for this stack
 ```
 
-`generators` records the ecosystem's own scaffolding commands. Overlays never contain project files — no `.csproj`, `package.json`, solution files or CI workflows. The one exception is additive: a stack's notes may define entries to add to a file its tools own, as the .NET stack does for solution folders.
+`generators` records the ecosystem's own scaffolding commands. The skill only hand-generates a project file when no official generator is available. Container support is the case today: asked once per scaffold, each stack uses its official container generator where one exists (Phoenix) and otherwise its bundled `Dockerfile.template` — Alpine runtime, non-root, `BUILD_CONFIGURATION` and `APP_VERSION` build arguments — with one root `compose.yaml` and `.dockerignore` assembled from the stacks' `compose.template.yaml` and `dockerignore.template`. Edits to generated files are additive: a stack's notes may define entries to add to a file its tools own, as the .NET stack does for solution folders.
 
 ## Local development
 

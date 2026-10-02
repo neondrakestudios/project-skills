@@ -1,0 +1,9 @@
+**/_build/
+**/deps/
+**/.elixir_ls/
+**/.idea/
+**/Dockerfile*
+**/compose*.yaml
+.git/
+context/
+docs/
