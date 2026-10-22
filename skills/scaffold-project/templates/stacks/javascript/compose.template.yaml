@@ -1,0 +1,8 @@
+  {{container_service}}:
+    image: {{container_service}}:${APP_VERSION:-1.0.0}
+    build:
+      context: {{container_context}}
+      args:
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-production}
+        APP_VERSION: ${APP_VERSION:-1.0.0}
+{{container_ports}}

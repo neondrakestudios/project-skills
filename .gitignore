@@ -5,3 +5,28 @@ context/.obsidian/cache
 docs/.obsidian/cache
 context/.trash/
 docs/.trash/
+
+# JetBrains IDEs (Rider, WebStorm, IntelliJ…): ignore per-user files; keep shared
+# project settings such as code style, run configurations and project dictionaries.
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/shelf/
+.idea/**/aws.xml
+.idea/**/httpRequests/
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/sonarlint/
+.idea/**/copilot.data.migration.*.xml
+http-client.private.env.json
+*.iws
+# Rider: regenerated per machine
+.idea/.idea.*/.idea/contentModel.xml
+.idea/.idea.*/.idea/projectSettingsUpdater.xml
+.idea/.idea.*/.idea/modules.xml
+.idea/.idea.*/.idea/.idea.*.iml
+# ReSharper/Rider per-user settings layer; the shared *.DotSettings stays
+*.DotSettings.user

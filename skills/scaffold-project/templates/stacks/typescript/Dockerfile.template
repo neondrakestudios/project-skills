@@ -1,0 +1,25 @@
+# Build arguments a pipeline can override.
+ARG BUILD_CONFIGURATION=production
+ARG APP_VERSION=1.0.0
+
+FROM {{container_image}} AS build
+WORKDIR /app
+COPY {{container_manifest_files}} ./
+RUN {{container_install}}
+COPY . .
+{{container_build}}
+{{container_prune}}
+
+FROM {{container_image}} AS final
+ARG BUILD_CONFIGURATION
+ARG APP_VERSION
+LABEL org.opencontainers.image.version=$APP_VERSION
+ENV NODE_ENV=$BUILD_CONFIGURATION
+# tini as PID 1 forwards stop signals, so the container shuts down promptly.
+RUN apk add --no-cache tini
+WORKDIR /app
+COPY --from=build --chown={{container_user}}:{{container_user}} /app ./
+USER {{container_user}}
+{{container_expose}}
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD {{container_cmd}}

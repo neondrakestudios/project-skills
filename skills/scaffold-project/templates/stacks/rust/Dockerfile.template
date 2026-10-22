@@ -1,0 +1,19 @@
+# Build arguments a pipeline can override.
+ARG BUILD_CONFIGURATION=release
+ARG APP_VERSION=1.0.0
+
+FROM docker.io/library/rust:{{rust_version}}-alpine AS build
+ARG BUILD_CONFIGURATION
+RUN apk add --no-cache musl-dev
+WORKDIR /src
+COPY . .
+RUN cargo install --locked --path {{container_crate_path}} --root /out --profile $BUILD_CONFIGURATION
+
+FROM docker.io/library/alpine:3 AS final
+ARG APP_VERSION
+LABEL org.opencontainers.image.version=$APP_VERSION
+RUN adduser -D -H -u 10001 app
+COPY --from=build /out/bin/{{container_binary}} /usr/local/bin/{{container_binary}}
+USER app
+{{container_expose}}
+ENTRYPOINT ["/usr/local/bin/{{container_binary}}"]

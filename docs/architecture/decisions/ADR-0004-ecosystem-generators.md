@@ -1,8 +1,8 @@
 ---
-status: Accepted
+status: Superseded by ADR-0007
 date: 2026-09-28
 supersedes:
-superseded-by:
+superseded-by: ADR-0007
 ---
 
 # ADR-0004: Offer ecosystem generators; never write project files
