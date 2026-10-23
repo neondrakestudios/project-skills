@@ -2,9 +2,10 @@
 
 ## Templates
 - A template is headings plus one `<!-- -->` line saying what belongs under each. Write real rules only where they hold for every repo that gets the file.
-- Slots are `{{name}}`, filled by the skill from evidence. Every slot a template uses must be listed in step 6 of `SKILL.md`, or be a stack slot prefixed with its stack name, like `{{dotnet_startup_project}}`.
+- Slots are `{{name}}`, filled by the skill from evidence. Every slot a template uses must be listed in step 7 of `SKILL.md`, or be a kind-wide slot defined in `kind.md`, or a stack slot prefixed with its stack name, like `{{dotnet_startup_project}}`.
 - `context/` templates stay frontmatter-light; `docs/` templates may carry frontmatter.
-- The stack list is the directory listing of `templates/stacks/`. Never write a list of stacks anywhere else.
+- The kind and stack lists are the directory listings of `templates/kinds/` and `templates/stacks/`. Never write a list of either anywhere else.
+- Base templates are kind-neutral. A rule that holds only for one kind goes in that kind's overlay; text that depends on the docs vault or on pull requests goes in a `{{#docs}}` or `{{#pull_requests}}` section. A software repo's rendered policy text should not change when a base file is reworded for another kind.
 - Only hand-generate a project file when no official generator is available. Where one exists, record its command in `stack.md`; where none does, bundle an opt-in template and say why in the stack's notes, as the .NET container files do.
 
 ## Skills
@@ -15,7 +16,7 @@
 - Generated output never references the home directory, this plugin, or `@` imports.
 
 ## Naming
-- Skill directories and stack directories are lowercase kebab-case; a stack's directory name is what `**Stacks:**` records.
+- Skill, kind and stack directories are lowercase kebab-case; their directory names are what `**Kind:**` and `**Stacks:**` record.
 - Branches: see the git workflow in `CLAUDE.md`.
 
 ## Testing

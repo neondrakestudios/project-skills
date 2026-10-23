@@ -1,8 +1,8 @@
 ---
-status: Accepted
+status: Superseded by ADR-0009
 date: 2026-09-28
 supersedes:
-superseded-by:
+superseded-by: ADR-0009
 ---
 
 # ADR-0001: Two sibling vaults with one-way links

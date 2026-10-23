@@ -4,14 +4,10 @@
 <!-- Rules that apply to every file regardless of stack. -->
 
 ## Naming
-<!-- Files, types, members. -->
+<!-- Files, folders and the names inside them. -->
 
-## Testing
-
-Prefer BDD-style specs that describe externally visible behavior; they double as living documentation. Use unit tests for the low-level cases BDD isn't suited to — high-volume data-driven cases, validators, mappers and edge cases.
-
-## Commits and pull requests
-<!-- Message format, PR size, what a PR description must contain. -->
+## Commits{{#pull_requests}} and pull requests{{/pull_requests}}
+<!-- Message format{{#pull_requests}}, PR size, what a PR description must contain{{/pull_requests}}. -->
 
 ## Documentation
-<!-- When a change needs an ADR, a guide or a requirements update. -->
+<!-- When a change needs {{#docs}}an ADR, a guide or a requirements update{{/docs}}{{^docs}}a row in DECISIONS.md{{/docs}}. -->

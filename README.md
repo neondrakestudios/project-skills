@@ -3,8 +3,10 @@
 Claude Code skills for the Neon Drake context system. Every repo that follows it keeps two things apart:
 
 - `context/` — an Obsidian vault of agent-facing current state, rewritten in place.
-- `docs/` — a sibling Obsidian vault of human documentation, immutable once accepted.
-- `CLAUDE.md` — self-contained policy: the two-root table, classification and linking rules, session start, git workflow, and the chosen stacks.
+- `docs/` — an optional sibling Obsidian vault of human documentation, immutable once accepted.
+- `CLAUDE.md` — self-contained policy: the vault table, classification and linking rules, session start, git workflow, and the project's kind and stacks.
+
+It isn't only for code. A repo's *kind* — `software`, `cad` for something designed and built, like furniture, or `writing` for a novel — decides which rules, files and vaults it gets.
 
 Output never depends on this plugin. The plugin is the generator; the committed files are the artifact.
 
@@ -23,27 +25,39 @@ The plugin loads in place from the clone: edits take effect at the next session 
 
 | Command | Does |
 |---|---|
-| `/neondrake:scaffold-project` | Sets a new or existing repo up with the two vaults, `CLAUDE.md` and stack-specific conventions |
+| `/neondrake:scaffold-project` | Sets a new or existing repo up with the vaults, `CLAUDE.md`, and kind- and stack-specific conventions |
 
 ## scaffold-project
 
 ```
-/neondrake:scaffold-project [stacks=a,b|none] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]
+/neondrake:scaffold-project [kind=NAME] [stacks=a,b|none] [docs=yes|no] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]
 ```
 
+- `kind=` — the project's kind. Defaults to `software` on a repo with files; asked on an empty one. Fixed once scaffolded.
 - `stacks=` — stack overlays to apply. Adds to any already recorded in `CLAUDE.md`; never removes.
+- `docs=no` — skip the `docs/` vault; decisions then live as rows in `context/DECISIONS.md`. The kind sets the default. Fixed once scaffolded.
 - `org=` — an org override source, a GitHub repo or local path. Recorded in `CLAUDE.md` so re-runs and teammates use the same one.
 - `ticket=` — the ticket for the scaffold's work branch, when the branch pattern needs one.
 - `generate=no` — don't offer the stack's own generator (`dotnet new`, `ng new`, …).
 - `dry-run` — report what would happen; ask nothing, run nothing, write nothing.
 
-It also sets up git to match the workflow, asking before each change and never pushing. A new repo gets an empty `.gitignore` commit on `main`, and an integration branch such as `dev` with the project `.gitignore`: the stacks' [github/gitignore](https://github.com/github/gitignore) templates plus JetBrains rules that keep shared IDE settings. Repo-only identity is set if none exists. The scaffold itself is written on a work branch off the integration branch — pass `ticket=KEY-123` when the branch pattern needs one — and offered as one commit for a pull request.
+It also sets up git to match the workflow, asking before each change and never pushing. The kind sets the default workflow: `software` uses work branches and pull requests; `cad` and `writing` commit straight to `main`. A new repo gets an empty `.gitignore` commit on `main`, and an integration branch such as `dev` with the project `.gitignore`: the stacks' [github/gitignore](https://github.com/github/gitignore) templates plus JetBrains rules that keep shared IDE settings. Repo-only identity is set if none exists. The scaffold itself is written on a work branch off the integration branch — pass `ticket=KEY-123` when the branch pattern needs one — and offered as one commit for a pull request.
+
+### Kinds
+
+| Kind | For | Adds | Defaults |
+|---|---|---|---|
+| `software` | Applications, services, libraries | BDD testing conventions | `docs/` vault; branches and pull requests |
+| `cad` | Furniture, woodworking, fabrication | Units, load and safety rules in `CLAUDE.md`; `context/MATERIALS.md` bill of materials; `docs/drawings/` | Asks about `docs/`; commits directly to `main` |
+| `writing` | Novels, stories, long-form writing | A `manuscript/` Obsidian vault for the story and all its notes; prose rules — the agent drafts only when asked, marking what it wrote; a style-sheet section in `CONVENTIONS.md` | No `docs/`; commits directly to `main` |
+
+Stacks belong to a kind, which only decides what the stack question offers: `freecad` is a `cad` stack, and `storyline` — the [StoryLine](https://github.com/PixeroJan/obsidian-storyline) Obsidian plugin — a `writing` one. StoryLine keeps research, corkboard notes, characters and locations in the manuscript vault beside the scenes, so the reference material is in view while you write. The skill enables the plugin in the vault but doesn't install it: Obsidian does, from Community plugins.
 
 Re-running is safe: existing files are never overwritten. Missing files are added, and differences from the current templates are reported for you to resolve.
 
 ### Template layers
 
-Three layers, each a directory shaped like `skills/scaffold-project/templates/`, least specific first:
+Three layers, each a directory shaped like `skills/scaffold-project/templates/` — base files, `kinds/` and `stacks/` — least specific first:
 
 | Layer | Location |
 |---|---|
@@ -54,12 +68,28 @@ Three layers, each a directory shaped like `skills/scaffold-project/templates/`,
 Resolution happens in two passes:
 
 1. **File-level replacement.** For every path — a base file or a single stack fragment — the most specific layer holding it wins outright.
-2. **Additive stacks.** Each chosen stack's winning fragments (`stacks/NAME/…`) are appended to the winning base files, composing across stacks; a fragment with no base counterpart becomes a new file.
+2. **Additive overlays.** The kind's winning fragments (`kinds/NAME/…`), then each chosen stack's (`stacks/NAME/…`), are appended to the winning base files, composing across stacks; a fragment with no base counterpart becomes a new file.
 
-So an override can replace a base file without dropping any stack's sections, replace one stack fragment, or add a whole stack. It holds only the files it changes; it is not a fork. Two extra files are recognized at an override's root:
+So an override can replace a base file without dropping any kind or stack sections, replace one fragment, or add a whole kind or stack. It holds only the files it changes; it is not a fork. Two extra files are recognized at an override's root:
 
 - `CLAUDE.append.md` — appended to the generated `CLAUDE.md`.
 - `git-workflow.md` — a finished git workflow section, used instead of the interview.
+
+### Adding a kind
+
+Add a directory under `templates/kinds/`; the listing is the list.
+
+```
+kinds/NAME/
+├── kind.md                  metadata: title, docs (yes|no|ask), git (pull-requests|direct), vaults, slots for the base files
+├── gitignore-fragment       optional ignore lines, e.g. for the kind's vaults
+├── CLAUDE.md                ## section, loaded every session, for rules that hold for the whole kind
+├── context/…                sections appended to base context files, or new context files
+├── docs/…                   sections appended to docs/index.md, or extra docs folders
+└── VAULT/…                  a vault the kind declares, e.g. writing's manuscript/.obsidian/
+```
+
+Base templates stay kind-neutral. Text that depends on the docs vault or on pull requests sits in `{{#docs}}…{{/docs}}` or `{{#pull_requests}}…{{/pull_requests}}` sections, with `{{^flag}}` for the opposite.
 
 ### Adding a stack
 
@@ -67,7 +97,8 @@ Add a directory under `templates/stacks/`. Nothing else changes; the directory l
 
 ```
 stacks/NAME/
-├── stack.md                 metadata: title, requires, detect (globs, optionally with contains), unless, generators
+├── stack.md                 metadata: title, kind, requires, detect (globs, optionally with contains), unless, generators
+├── gitignore-fragment       optional ignore lines, when github/gitignore has no template
 ├── *.yaml                   optional data the stack's notes use, e.g. dotnet's solution-items.yaml
 ├── CLAUDE.md                ### section for build/test/run and expected layout
 ├── context/CONVENTIONS.md   ## section appended to CONVENTIONS.md

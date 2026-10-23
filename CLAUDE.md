@@ -77,5 +77,5 @@ The plugin is Markdown and JSON; there is no build.
 - `skills/scaffold-project/SKILL.md` — the skill's procedure.
 - `skills/scaffold-project/git-workflow.md` — the git workflow interview the skill runs.
 - `skills/scaffold-project/scripts/dump-templates.sh` — prints plugin files for the skill in one pre-approved call.
-- `skills/scaffold-project/templates/` — bundled templates: base `CLAUDE.md`, `context/`, `docs/`, `gitignore-fragment`, and `stacks/NAME/` overlays.
+- `skills/scaffold-project/templates/` — bundled templates: base `CLAUDE.md`, `context/`, `docs/`, `gitignore-fragment`, `kinds/NAME/` overlays and `stacks/NAME/` overlays.
 - `context/`, `docs/` — this repo's own vaults.
