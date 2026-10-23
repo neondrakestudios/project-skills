@@ -1,7 +1,13 @@
 # Obsidian: per-user UI state (shared vault settings are committed)
 context/.obsidian/workspace*
+{{#docs}}
 docs/.obsidian/workspace*
+{{/docs}}
 context/.obsidian/cache
+{{#docs}}
 docs/.obsidian/cache
+{{/docs}}
 context/.trash/
+{{#docs}}
 docs/.trash/
+{{/docs}}

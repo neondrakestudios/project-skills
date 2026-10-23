@@ -1,7 +1,7 @@
 ---
 name: scaffold-project
 description: "Scaffold a new or existing repo to follow the Neon Drake context system: two-vault context and documentation, CLAUDE.md, and stack-specific conventions. Offers to run the ecosystem's own generator; does not generate project files itself."
-argument-hint: "[stacks=a,b|none] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]"
+argument-hint: "[kind=NAME] [stacks=a,b|none] [docs=yes|no] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]"
 allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/dump-templates.sh *)
 ---
 
@@ -11,13 +11,13 @@ Arguments: $ARGUMENTS
 
 Bundled templates: `${CLAUDE_SKILL_DIR}/templates/`
 
-The stacks on offer are the subdirectories of `stacks/` in the resolved layers (step 2) — list them from disk.
+The kinds on offer are the subdirectories of `kinds/`, and the stacks the subdirectories of `stacks/`, in the resolved layers (step 2) — list them from disk.
 
 Everything this skill needs from outside the target repo — its templates, `git-workflow.md`, the plugin manifest and an org override checkout — is read through one pre-approved command, so no permission prompt appears. Run it once, with every directory you need, and work from its output:
 
 `${CLAUDE_SKILL_DIR}/scripts/dump-templates.sh ${CLAUDE_SKILL_DIR} ${CLAUDE_PLUGIN_ROOT}/.claude-plugin [ORG_CHECKOUT]`
 
-Each file appears under a `=== FILE path ===` line within its `=== LAYER dir ===` block. Never use Read, Glob, Grep or other shell commands on these directories. The project layer, `.claude/context-templates/`, is inside the repo; read it normally. Never offer a stack from memory or from this file.
+Each file appears under a `=== FILE path ===` line within its `=== LAYER dir ===` block. Never use Read, Glob, Grep or other shell commands on these directories. The project layer, `.claude/context-templates/`, is inside the repo; read it normally. Never offer a kind or a stack from memory or from this file.
 
 ## Invariants
 
@@ -35,14 +35,20 @@ These override anything below that seems to conflict.
 Work at the git root (`git rev-parse --show-toplevel`). If the directory isn't a git repository, step 5 offers to initialize it; until then, work in the current directory. Record:
 
 - Whether `CLAUDE.md`, `context/`, `docs/`, `.gitignore`, `README*` and `.claude/context-templates/` exist.
-- **Empty or not.** The repo is *empty* when it has no file outside `.git/`, `.claude/`, `context/`, `docs/`, other dot-directories (`.github/`, `.vscode/`, `.idea/`…), `CLAUDE.md`, `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` and `.editorconfig`.
+- **Empty or not.** The repo is *empty* when it has no file outside `.git/`, `.claude/`, `context/`, `docs/`, the vault directories any available kind declares (`manuscript/`), other dot-directories (`.github/`, `.vscode/`, `.idea/`…), `CLAUDE.md`, `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` and `.editorconfig`.
 - **Scaffolded or not.** The repo is *scaffolded* when `CLAUDE.md` contains a `**Stacks:**` line.
 - Default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`), else the current branch, else `main`.
 - `project_name`: the solution or package name, else the repository directory name.
 
-Resolve in this order: the org source, then the available stacks (step 2 lists them across all layers), then the chosen stacks.
+Resolve in this order: the org source, then the available kinds and stacks (step 2 lists them across all layers), then the kind, the chosen stacks and the docs vault.
 
 **Org override source** — first that applies: `org=` argument; the `**Org templates:**` line in `CLAUDE.md`; otherwise none. `org=none` means none. A GitHub `OWNER/REPO` is fetched with `gh repo clone OWNER/REPO <tmp> -- --depth 1`; a path is used in place. Record the commit SHA for the report. If the fetch fails, stop and report — do not silently fall back to the bundle.
+
+**Kind** — exactly one per repo; its `kind.md` sets the defaults below and the kind-wide slots (step 7):
+
+- **Scaffolded:** the `**Kind:**` line in `CLAUDE.md`; with no such line, `software`. A `kind=` that differs stops the run before anything is written: a repo's kind never changes.
+- **Not scaffolded:** the `kind=` argument; otherwise `software` when the repo isn't empty; otherwise the `kind` of the stacks named in `stacks=`, when they all share one; otherwise ask. When you cannot ask, use `software` and report it.
+- An unknown kind name stops the run before anything is written.
 
 **Stacks:**
 
@@ -54,7 +60,12 @@ Resolve in this order: the org source, then the available stacks (step 2 lists t
 
 **Inferring:** for each available stack, match its `stack.md` `detect` entries anywhere in the tree. An entry is a glob, or a `glob` with `contains`, which matches only files whose text contains that string. Search skipping `node_modules/`, `bin/`, `obj/`, `dist/`, `target/`, `.venv/`, `deps/`, `_build/`, `vendor/`. Check a stack's `unless` globs in the directory of each `detect` match: a match is suppressed when that same directory holds an `unless` file, and the stack is inferred if any match survives. So a root with `angular.json` and `tsconfig.json` is `angular` only, while `web/angular.json` plus `api/tsconfig.json` is `angular` and `typescript`. Say which file matched each inferred stack and where, and which `unless` file suppressed a match.
 
-**Asking** (never in a dry run): ask for every stack the project will use — a repo commonly has more than one, such as .NET with Angular. Use one AskUserQuestion call with `multiSelect: true` questions, one option per available stack labelled with its `stack.md` title, sorted by title. A question holds at most four options, so split the stacks across up to four questions headed "Stacks 1/N", "Stacks 2/N" and so on; the answer is the union of every selection. Only past sixteen stacks, ask in plain text listing all of them.
+**Docs vault** — whether `docs/` exists in the output:
+
+- **Scaffolded:** the `**Docs vault:**` line in `CLAUDE.md`; with no such line, `yes`. A `docs=` that differs stops the run before anything is written.
+- **Not scaffolded:** the `docs=` argument; otherwise `yes` when `docs/` already exists; otherwise the kind's `docs` field — `yes`, `no`, or `ask`. When asked and you cannot ask, `yes`.
+
+**Asking** (never in a dry run): ask the kind first, alone — one single-select question, one option per available kind labelled with its `kind.md` title and described by the first sentence of its body. Then ask, in one AskUserQuestion call, the docs vault question when the kind says `ask` (yes or no, describing that without it decisions live as rows in `context/DECISIONS.md`) and the stacks. Ask for every stack the project will use — a repo commonly has more than one, such as .NET with Angular — using `multiSelect: true` questions, one option per available stack of the chosen kind, labelled with its `stack.md` title and sorted by title. A stack's kind is its `stack.md` `kind` field, `software` when absent; `stacks=` may still name a stack of any kind. A call holds at most four questions of at most four options, so split the stacks across questions headed "Stacks 1/N", "Stacks 2/N" and so on, across further calls if needed; the answer is the union of every selection. Only past sixteen stacks, ask in plain text listing all of them. A kind with no stacks skips the stacks question and records `none`.
 
 ## 2. Resolve templates
 
@@ -68,15 +79,16 @@ Every layer is a directory shaped like `templates/`:
 
 Resolution:
 
-- **Available stacks** are the union of `stacks/*/` directory names across all three layers.
-- **File-level replacement.** For every relative path — base files and stack files alike — the most specific layer holding that path wins outright: project over org over bundle. Never merge two versions of one file. An override can therefore replace a base file, replace one stack fragment, or add a whole stack.
-- **Stack overlays are additive.** For each chosen stack, in the order listed, each winning file under `stacks/NAME/` targets the same relative path in the output:
-  - Files at the overlay's root other than `CLAUDE.md` — `stack.md`, and data files its notes use, like `solution-items.yaml` — are metadata. Never write them.
-  - `CLAUDE.md` fills the `{{stack_sections}}` slot of the base `CLAUDE.md`.
-  - A path that also exists as a base file is appended to it.
+- **Available kinds and stacks** are the union of `kinds/*/` and `stacks/*/` directory names across all three layers.
+- **File-level replacement.** For every relative path — base, kind and stack files alike — the most specific layer holding that path wins outright: project over org over bundle. Never merge two versions of one file. An override can therefore replace a base file, replace one kind or stack fragment, or add a whole kind or stack.
+- **Overlays are additive.** The chosen kind's overlay, `kinds/NAME/`, is applied first, then each chosen stack's, `stacks/NAME/`, in the order listed. Each winning file in an overlay targets the same relative path in the output:
+  - Files at the overlay's root other than `CLAUDE.md` and `gitignore-fragment` — `kind.md`, `stack.md`, and data files a stack's notes use, like `solution-items.yaml` — are metadata. Never write them.
+  - `CLAUDE.md` fills the `{{kind_section}}` slot of the base `CLAUDE.md` for a kind, and the `{{stack_sections}}` slot for a stack.
+  - A path that also exists as a base file is appended to it. `gitignore-fragment` always is.
   - Any other path is a new file.
+- **No docs vault:** when the docs vault is `no`, drop every output path under `docs/`, from every layer, and say so in the report.
 - **CLAUDE.append.md** at the root of the org layer, then the project layer, is appended to the end of the generated `CLAUDE.md`. This is the only fragment-level addition an override may make.
-- Track provenance per output path as the list of contributors, e.g. `context/CONVENTIONS.md ← bundle + stacks/dotnet(bundle) + stacks/angular(org)`.
+- Track provenance per output path as the list of contributors, e.g. `context/CONVENTIONS.md ← bundle + kinds/software(bundle) + stacks/dotnet(bundle) + stacks/angular(org)`.
 
 ## 3. Dry run
 
@@ -86,7 +98,9 @@ With `dry-run`, stop after this step: ask nothing, change no git state, run no g
 
 Fills `{{git_workflow}}`. Skip this step on a scaffolded repo — never re-interview on a re-run. Also skip it when `CLAUDE.md` already has a git section: a `##` heading that matches `Git workflow and branching` (see matching in step 8) or contains `git`, `branch`, `branches` or `branching` as a whole word. `## GitHub Actions` is not a git section. That heading counts as the match for the template's git section in step 8, so the template section is not appended beside it.
 
-Otherwise, if a resolved org or project layer has `git-workflow.md` at its root, use it verbatim as the section and record it in provenance. If not, run the interview in `${CLAUDE_SKILL_DIR}/git-workflow.md`: infer first, ask only what evidence leaves open, then write the section as that file describes.
+Otherwise, if a resolved org or project layer has `git-workflow.md` at its root, use it verbatim as the section and record it in provenance. If not, run the interview in `${CLAUDE_SKILL_DIR}/git-workflow.md`: infer first, ask only what evidence leaves open, then write the section as that file describes. The kind's `git` field is the interview's default.
+
+This step also sets the `pull_requests` flag used in step 7: true when the workflow — from the interview, the override file or the existing git section — merges changes through pull requests, false when it commits directly to the default branch. A section that mentions neither pull requests nor PRs is false.
 
 ## 5. Repository and work branch
 
@@ -136,7 +150,25 @@ Only on a repo that is empty and not scaffolded, on the work branch from step 5,
 
 ## 7. Survey and fill slots
 
-Slots are `{{name}}`. Fill each from evidence, in this order of preference: the repo, `gh repo view --json name,description`, the stack overlay. Never invent prose to fill a slot. A slot with no evidence becomes `TODO: <what is needed>` and goes in the report. Never invent stand-in syntax such as `<exec>`: a line that depends on an unfilled slot becomes a single `TODO:` line.
+Slots are `{{name}}`. Fill each from evidence, in this order of preference: the repo, `gh repo view --json name,description`, the kind or stack overlay. Never invent prose to fill a slot. A slot with no evidence becomes `TODO: <what is needed>` and goes in the report. Never invent stand-in syntax such as `<exec>`: a line that depends on an unfilled slot becomes a single `TODO:` line. A slot alone on its line that fills empty removes the line.
+
+**Conditional sections**, in any template file: text between `{{#flag}}` and `{{/flag}}` is kept only when the flag is true, and text between `{{^flag}}` and `{{/flag}}` only when it is false. A line holding nothing but a tag is removed with the tag. Resolve them before filling slots. The flags:
+
+- `docs`: the docs vault from step 1.
+- `pull_requests`: from step 4.
+
+Derived and kind-wide slots:
+
+- `kind`: the kind's directory name.
+- `vault_intro`: the vaults are `context/`, `docs/` when the docs vault is `yes`, and those the kind's `vaults` field declares. With one, write: This repo keeps one Obsidian vault, `context/`, at the root. With more: This repo keeps N Obsidian vaults as siblings at the root. They are never nested. — N spelled out, `two` or `three`.
+- `wikilink_vaults`: every vault but `context/`, as code spans joined with "and" — `` `docs/` `` or `` `docs/` and `manuscript/` ``.
+- `docs_vault`: `yes` or `no`.
+- `change_unit`: `PR` when `pull_requests`, else `commit`.
+- `history`: where history lives — `git, PRs and ADRs`, `git and PRs`, `git and ADRs` or `git`, by `pull_requests` and `docs`.
+- `conventions_when`, `docs_holds`, `kind_roots`, `kind_files`: from the `slots` map in the kind's `kind.md`; a slot it doesn't define is empty.
+- `kind_section`: the kind's `CLAUDE.md` fragment, else empty.
+
+Repo slots:
 
 - `project_name`: from step 1.
 - `summary`: first paragraph of the README, else the GitHub description, else TODO.
@@ -145,30 +177,30 @@ Slots are `{{name}}`. Fill each from evidence, in this order of preference: the 
 - `org_templates`: the org source as given, or `none`.
 - `git_workflow`: from step 4.
 - `stack_sections`: each stack's `CLAUDE.md` fragment. Where the repo exists, correct its commands and layout against what is actually there — the real startup project, test projects, scripts. When a stack lives in a subdirectory, start its section with a `- Location: \`DIR/\`` line and write its commands as run from there.
-- `layout`: the top two levels of the tree, excluding `context/` and `docs/`, one line each. On an empty repo, use the stacks' expected-layout lines and label them "expected".
+- `layout`: the top two levels of the tree, excluding `context/` and `docs/`, one line each. On an empty repo, use the stacks' expected-layout lines and label them "expected"; with no stacks, `TODO: layout, once the project has files`.
 - Stack fragment slots such as `{{dotnet_startup_project}}`: from the repo, else TODO. When the stack's `stack.md` body says how to fill its slots or which lines to keep, follow it.
 
 For a new `CONVENTIONS.md` on a repo with code, replace a heading's `<!-- -->` guidance line with conventions you can point to evidence for (`.editorconfig`, analyzer and lint config, `Directory.Build.props`, `tsconfig.json`, consistent patterns in the code). Keep the guidance line where there is no evidence. Where a stack fragment states a concrete convention that the code contradicts — the fragment says NUnit, the test projects use xUnit — write what the code does and list the mismatch under "Needs your decision".
 
 ## 8. Write
 
-Create `context/` and `docs/` at the root, never one inside the other, with each `.obsidian/` from the templates. Then, for every resolved output path:
+Create `context/` at the root, `docs/` beside it when the docs vault is `yes`, and each vault the kind's `vaults` field declares — siblings, never one inside another — each with its `.obsidian/` from the templates. Then, for every resolved output path:
 
 **Heading matching**, used throughout: `##` headings match case-insensitively, and match when either one starts with the other — `Git Workflow and Branching` matches `Git workflow and branching`, `Stack and tooling` matches `Stack`. Wherever this step says "the X section", it means the section whose heading matched the template's X heading.
 
 - **Missing file:** create it. Put `.gitkeep` only in directories that would otherwise be empty.
 - **Existing file:** leave it untouched and list it as skipped. The only exceptions:
-  1. `.gitignore` — collect the lines of the resolved `gitignore-ide` and `gitignore-fragment` not already present verbatim. If any, append them as one block at the end of the file, preceded by the fragment's header comment only when that comment isn't already in the file. Create `.gitignore` if missing.
+  1. `.gitignore` — collect the lines of the resolved `gitignore-ide` and the composed `gitignore-fragment` (base plus each overlay's) not already present verbatim. If any, append them as one block at the end of the file, each group preceded by its header comment only when that comment isn't already in the file. Create `.gitignore` if missing.
   2. A stack being added (chosen now, absent from the recorded `**Stacks:**` line) — append its fragment to each existing target file whose text does not already contain the fragment's first heading, insert its `CLAUDE.md` fragment at the end of the section holding the `**Stacks:**` line, and add the stack to that line.
   3. An existing `CLAUDE.md` that is not scaffolded, as described next.
   4. Additions a chosen stack's `stack.md` notes define for a file the stack's tools own, such as .NET solution items. Apply them on every run, only ever adding entries, and report what was added.
   5. The one conversion a stack's notes define for project files its generators created in this same run, such as moving .NET package versions into `Directory.Packages.props`. Never apply it to files that existed before the run.
 
-**Existing CLAUDE.md never scaffolded** (no `**Stacks:**` line): keep every line of it. Append each `##` section of the generated `CLAUDE.md` whose heading it lacks. For each heading it already has, keep its version and report the section as a conflict with a one-line description of the difference. If it already has a Stack section, insert the `**Stacks:**` and `**Org templates:**` lines at the top of that section, and append each chosen stack's `CLAUDE.md` fragment at its end unless the section already contains that fragment's first heading. Either way the file must end up with a `**Stacks:**` line — without it, the next run cannot tell the repo was scaffolded.
+**Existing CLAUDE.md never scaffolded** (no `**Stacks:**` line): keep every line of it. Append each `##` section of the generated `CLAUDE.md` whose heading it lacks. For each heading it already has, keep its version and report the section as a conflict with a one-line description of the difference. If it already has a Stack section, insert the `**Kind:**`, `**Stacks:**`, `**Docs vault:**` and `**Org templates:**` lines at the top of that section, and append each chosen stack's `CLAUDE.md` fragment at its end unless the section already contains that fragment's first heading. Either way the file must end up with a `**Stacks:**` line — without it, the next run cannot tell the repo was scaffolded.
 
-**Existing CLAUDE.md already scaffolded:** do not add sections, even ones the template has and the file lacks — they may have been removed deliberately. Report each such missing section, and each section without slots — the policy sections — whose text differs from the current template, so template changes surface without being forced. Sections built from slots are expected to differ; don't report them.
+**Existing CLAUDE.md already scaffolded:** do not add sections, even ones the template has and the file lacks — they may have been removed deliberately. Report each such missing section, and each policy section whose text differs from the current template, so template changes surface without being forced. A policy section is one with no repo slots — only flags and derived or kind-wide slots — and is compared after rendering those with this repo's values. Sections built from repo slots are expected to differ; don't report them. A file with no `**Kind:**` or `**Docs vault:**` line predates kinds: use the defaults from step 1, don't add the lines, and list them under "Needs your decision".
 
-**PROJECT_STATE.md**, only when creating it: seed it with facts true today — the scaffold date as an absolute date, the stacks, which generators ran, the default branch, open PR count (`gh pr list --state open --base {{default_branch}}`) when there is a GitHub remote, and whether CI config exists. A section with nothing true yet says "None yet." Never write aspirational or placeholder prose.
+**PROJECT_STATE.md**, only when creating it: seed it with facts true today — the scaffold date as an absolute date, the kind, the stacks, which generators ran, the default branch, open PR count (`gh pr list --state open --base {{default_branch}}`) when the workflow uses pull requests and there is a GitHub remote, and whether CI config exists. A section with nothing true yet says "None yet." Never write aspirational or placeholder prose.
 
 Before finishing, grep every file you wrote for `~/`, `$HOME`, `/home/`, `/Users/`, `@~`, and `[[` under `context/`. Fix any hit in output you created; report hits in files you did not create.
 
@@ -180,9 +212,9 @@ Offer to commit everything this run wrote, including generator output, on the wo
 
 Print, in this order, omitting empty sections:
 
-1. **Stacks** — each with how it was determined (recorded, argument, inferred from `<file>`, asked).
-2. **Git workflow** — each value and how it was determined (existing section, override file, inferred from `<evidence>`, asked).
-3. **Repository** — identity, branches created or tracked, the work branch, each commit made, the current branch, and the push commands for every new branch plus the pull request to open from the work branch into the integration branch.
+1. **Kind, stacks and docs vault** — each with how it was determined (recorded, argument, inferred from `<file>`, kind default, asked).
+2. **Git workflow** — each value and how it was determined (existing section, override file, inferred from `<evidence>`, kind default, asked).
+3. **Repository** — identity, branches created or tracked, the work branch, each commit made, the current branch, and the push commands for every new branch plus, when the workflow uses pull requests, the pull request to open from the work branch into the integration branch.
 4. **Created** — new paths. A new file is listed here only, however many layers contributed to it; its contributors are in Provenance.
 5. **Appended** — existing files that received additions, with what was added. Never a file this run created.
 6. **Skipped** — existing paths left untouched.

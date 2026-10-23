@@ -3,7 +3,7 @@
 Map of content. Link notes here with wikilinks. Nothing in this vault links into `context/`.
 
 ## Architecture
-<!-- System overview notes and diagrams. -->
+<!-- Overview notes and diagrams of how the whole fits together. -->
 
 ## Decisions
 <!-- ADRs in architecture/decisions/, newest first. -->

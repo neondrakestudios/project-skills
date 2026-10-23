@@ -1,6 +1,6 @@
 # Git workflow interview
 
-Produces the `{{git_workflow}}` slot: three short paragraphs covering the base branch, tickets and branch names, and what to check before editing.
+Produces the `{{git_workflow}}` slot: three short paragraphs covering the base branch, tickets and branch names, and what to check before editing — or two, for a workflow that commits directly to the default branch.
 
 ## Infer first
 
@@ -16,13 +16,15 @@ A value with unambiguous evidence — every PR targets `dev`, every branch is `f
 
 Use AskUserQuestion, at most four questions per call; split a round across calls when it has more. Skip any question already answered by evidence or by an earlier answer.
 
+The kind's `git` field is the default for the first question: `pull-requests` offers "never" first, `direct` offers "always" first, each marked "(Recommended)" unless evidence says otherwise — PRs in `gh pr list` mean pull requests are in use.
+
 Round 1:
 
-1. **Integration branch** — the base for new work: the default branch, `dev`, `develop`, or other.
-2. **Tracker** — Linear, GitHub Issues, Jira, or none.
-3. **Direct commits to the integration branch** — never (PR only), or allowed for trivial changes.
+1. **Direct commits to the integration branch** — never (PR only); allowed for trivial changes; or always — commit straight to the default branch, with no work branches or pull requests.
+2. **Integration branch** — the base for new work: the default branch, `dev`, `develop`, or other. Skip it when commits are always direct: the default branch is the only branch.
+3. **Tracker** — Linear, GitHub Issues, Jira, or none.
 
-Round 2, only what round 1 made relevant:
+With always-direct commits there is no round 2. Otherwise, round 2, only what round 1 made relevant:
 
 - **Branch names** — show each as a preview with an example, offering only patterns that fit the tracker answer: with no tracker, only `TYPE/short-description`-style patterns; with a tracker:
   - `TYPE/KEY-123-short-description`
@@ -38,7 +40,15 @@ When you cannot ask, write what the evidence supports and a `TODO:` line for eac
 
 ## Write
 
-Write plain, imperative prose in this order — no headings, no options that weren't chosen:
+Write plain, imperative prose — no headings, no options that weren't chosen.
+
+With always-direct commits, write two short paragraphs: commit directly to the default branch, with no work branches or pull requests, keeping each commit to one change (with a tracker, naming its issue key in the message); and before editing, check that you're on the default branch with a clean tree, and stop and ask if not. For example:
+
+> Commit directly to `main`; there are no work branches or pull requests. Keep each commit to one change, with a message that says what changed and why.
+>
+> Before editing, check that you're on `main` and the working tree is clean. If not, stop and ask.
+
+Otherwise, in this order:
 
 1. Which branch is the base for new work, which branch PRs never target, and whether direct commits to it are allowed.
 2. The ticket requirement, the branch pattern with its allowed types, and one realistic example using the real key (`feature/SR-142-usage-upload-crash`). With Linear, add that the issue ID must appear in the branch name so Linear links the PR. State whether dependent work may branch from another work branch.
