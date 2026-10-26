@@ -1,7 +1,7 @@
 ---
 name: scaffold-project
 description: "Scaffold a new or existing repo to follow the Neon Drake context system: two-vault context and documentation, CLAUDE.md, and stack-specific conventions. Offers to run the ecosystem's own generator; does not generate project files itself."
-argument-hint: "[kind=NAME] [stacks=a,b|none] [docs=yes|no] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]"
+argument-hint: "[kind=NAME] [stacks=a,b|none] [docs=yes|no] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [series=yes|no] [dry-run]"
 allowed-tools: Bash(${CLAUDE_SKILL_DIR}/scripts/dump-templates.sh *)
 ---
 
@@ -156,6 +156,7 @@ Slots are `{{name}}`. Fill each from evidence, in this order of preference: the 
 
 - `docs`: the docs vault from step 1.
 - `pull_requests`: from step 4.
+- Flags a chosen stack lists in its `stack.md` `flags` field, such as `series`: decided as that stack's notes say. An argument `NAME=yes|no` naming the flag sets it. A flag of a stack not chosen is false.
 
 Derived and kind-wide slots:
 
@@ -212,7 +213,7 @@ Offer to commit everything this run wrote, including generator output, on the wo
 
 Print, in this order, omitting empty sections:
 
-1. **Kind, stacks and docs vault** — each with how it was determined (recorded, argument, inferred from `<file>`, kind default, asked).
+1. **Kind, stacks, docs vault and stack flags** — each with how it was determined (recorded, argument, inferred from `<file>`, kind default, asked).
 2. **Git workflow** — each value and how it was determined (existing section, override file, inferred from `<evidence>`, kind default, asked).
 3. **Repository** — identity, branches created or tracked, the work branch, each commit made, the current branch, and the push commands for every new branch plus, when the workflow uses pull requests, the pull request to open from the work branch into the integration branch.
 4. **Created** — new paths. A new file is listed here only, however many layers contributed to it; its contributors are in Provenance.
