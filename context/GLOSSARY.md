@@ -6,7 +6,7 @@
 | Layer | One source of templates, shaped like `templates/`: bundle, org override or project override |
 | Kind | What sort of project a repo is — `software`, `cad`, `writing` — recorded as `**Kind:**`; one per repo, never changed |
 | Kind overlay | `templates/kinds/NAME/` in any layer; applied before the stacks, with `kind.md` setting defaults, extra vaults and kind-wide slots |
-| Flag | `docs` or `pull_requests`; selects `{{#flag}}…{{/flag}}` and `{{^flag}}…{{/flag}}` conditional sections in templates |
+| Flag | `docs`, `pull_requests`, or one a stack declares in its `stack.md` `flags` field (`series`); selects `{{#flag}}…{{/flag}}` and `{{^flag}}…{{/flag}}` conditional sections in templates |
 | Stack overlay | `templates/stacks/NAME/` in any layer; its files are appended to base files or added as new ones |
 | Fragment | One file inside a kind or stack overlay |
 | Org override | A repo or path given by `org=`, holding only its differences: replaced files, added stacks, and optionally `CLAUDE.append.md` and `git-workflow.md` |

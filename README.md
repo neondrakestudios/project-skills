@@ -30,7 +30,7 @@ The plugin loads in place from the clone: edits take effect at the next session 
 ## scaffold-project
 
 ```
-/neondrake:scaffold-project [kind=NAME] [stacks=a,b|none] [docs=yes|no] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [dry-run]
+/neondrake:scaffold-project [kind=NAME] [stacks=a,b|none] [docs=yes|no] [org=OWNER/REPO|PATH|none] [ticket=KEY-123] [generate=yes|no] [series=yes|no] [dry-run]
 ```
 
 - `kind=` — the project's kind. Defaults to `software` on a repo with files; asked on an empty one. Fixed once scaffolded.
@@ -39,6 +39,7 @@ The plugin loads in place from the clone: edits take effect at the next session 
 - `org=` — an org override source, a GitHub repo or local path. Recorded in `CLAUDE.md` so re-runs and teammates use the same one.
 - `ticket=` — the ticket for the scaffold's work branch, when the branch pattern needs one.
 - `generate=no` — don't offer the stack's own generator (`dotnet new`, `ng new`, …).
+- `series=yes` — with `storyline`, the books form a StoryLine series. Asked when not given; detected from an existing `series.json`.
 - `dry-run` — report what would happen; ask nothing, run nothing, write nothing.
 
 It also sets up git to match the workflow, asking before each change and never pushing. The kind sets the default workflow: `software` uses work branches and pull requests; `cad` and `writing` commit straight to `main`. A new repo gets an empty `.gitignore` commit on `main`, and an integration branch such as `dev` with the project `.gitignore`: the stacks' [github/gitignore](https://github.com/github/gitignore) templates plus JetBrains rules that keep shared IDE settings. Repo-only identity is set if none exists. The scaffold itself is written on a work branch off the integration branch — pass `ticket=KEY-123` when the branch pattern needs one — and offered as one commit for a pull request.
@@ -52,6 +53,8 @@ It also sets up git to match the workflow, asking before each change and never p
 | `writing` | Novels, stories, long-form writing | A `manuscript/` Obsidian vault for the story and all its notes; prose rules — the agent drafts only when asked, marking what it wrote; a style-sheet section in `CONVENTIONS.md` | No `docs/`; commits directly to `main` |
 
 Stacks belong to a kind, which only decides what the stack question offers: `freecad` is a `cad` stack, and `storyline` — the [StoryLine](https://github.com/PixeroJan/obsidian-storyline) Obsidian plugin — a `writing` one. StoryLine keeps research, corkboard notes, characters and locations in the manuscript vault beside the scenes, so the reference material is in view while you write. The skill enables the plugin in the vault but doesn't install it: Obsidian does, from Community plugins.
+
+For a series, StoryLine shares one Codex across the books. The generated `CLAUDE.md` then keeps cross-book items — plot threads, mysteries, foreshadowing — as entries in custom categories of that shared Codex, which scenes in any book link to. The series itself is still created in StoryLine, with **Create Series from Current Project**.
 
 Re-running is safe: existing files are never overwritten. Missing files are added, and differences from the current templates are reported for you to resolve.
 
@@ -89,7 +92,7 @@ kinds/NAME/
 └── VAULT/…                  a vault the kind declares, e.g. writing's manuscript/.obsidian/
 ```
 
-Base templates stay kind-neutral. Text that depends on the docs vault or on pull requests sits in `{{#docs}}…{{/docs}}` or `{{#pull_requests}}…{{/pull_requests}}` sections, with `{{^flag}}` for the opposite.
+Base templates stay kind-neutral. Text that depends on the docs vault or on pull requests sits in `{{#docs}}…{{/docs}}` or `{{#pull_requests}}…{{/pull_requests}}` sections, with `{{^flag}}` for the opposite. A stack can declare its own flags in `stack.md`'s `flags` field, as `storyline` does with `series`; its notes say how each is decided, and a `NAME=yes|no` argument sets it.
 
 ### Adding a stack
 
@@ -97,7 +100,7 @@ Add a directory under `templates/stacks/`. Nothing else changes; the directory l
 
 ```
 stacks/NAME/
-├── stack.md                 metadata: title, kind, requires, detect (globs, optionally with contains), unless, generators
+├── stack.md                 metadata: title, kind, requires, detect (globs, optionally with contains), unless, generators, flags
 ├── gitignore-fragment       optional ignore lines, when github/gitignore has no template
 ├── *.yaml                   optional data the stack's notes use, e.g. dotnet's solution-items.yaml
 ├── CLAUDE.md                ### section for build/test/run and expected layout
