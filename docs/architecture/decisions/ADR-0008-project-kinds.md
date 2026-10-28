@@ -1,8 +1,8 @@
 ---
-status: Accepted
+status: Superseded by ADR-0010
 date: 2026-10-22
 supersedes:
-superseded-by:
+superseded-by: ADR-0010
 ---
 
 # ADR-0008: Project kinds — one kind overlay beneath the stacks

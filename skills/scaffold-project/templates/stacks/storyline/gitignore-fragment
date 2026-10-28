@@ -1,5 +1,5 @@
 # StoryLine: plugin code is installed by Obsidian; exports are regenerated
-manuscript/.obsidian/plugins/storyline/main.js
-manuscript/.obsidian/plugins/storyline/manifest.json
-manuscript/.obsidian/plugins/storyline/styles.css
-manuscript/**/Exports/
+{{writing_vault}}/.obsidian/plugins/storyline/main.js
+{{writing_vault}}/.obsidian/plugins/storyline/manifest.json
+{{writing_vault}}/.obsidian/plugins/storyline/styles.css
+{{writing_vault}}/**/Exports/

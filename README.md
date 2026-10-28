@@ -50,9 +50,9 @@ It also sets up git to match the workflow, asking before each change and never p
 |---|---|---|---|
 | `software` | Applications, services, libraries | BDD testing conventions | `docs/` vault; branches and pull requests |
 | `cad` | Furniture, woodworking, fabrication | Units, load and safety rules in `CLAUDE.md`; `context/MATERIALS.md` bill of materials; `docs/drawings/` | Asks about `docs/`; commits directly to `main` |
-| `writing` | Novels, stories, long-form writing | A `manuscript/` Obsidian vault for the story and all its notes; prose rules — the agent drafts only when asked, marking what it wrote; a style-sheet section in `CONVENTIONS.md` | No `docs/`; commits directly to `main` |
+| `writing` | Novels, stories, long-form writing | A project-named Obsidian vault for the story and all its notes; prose rules — the agent drafts only when asked, marking what it wrote; a style-sheet section in `CONVENTIONS.md` | No `docs/`; commits directly to `main` |
 
-Stacks belong to a kind, which only decides what the stack question offers: `freecad` is a `cad` stack, and `storyline` — the [StoryLine](https://github.com/PixeroJan/obsidian-storyline) Obsidian plugin — a `writing` one. StoryLine keeps research, corkboard notes, characters and locations in the manuscript vault beside the scenes, so the reference material is in view while you write. The skill enables the plugin in the vault but doesn't install it: Obsidian does, from Community plugins.
+Stacks belong to a kind, which only decides what the stack question offers: `freecad` is a `cad` stack, and `storyline` — the [StoryLine](https://github.com/PixeroJan/obsidian-storyline) Obsidian plugin — a `writing` one. For writing, the skill asks for the vault-folder name, suggesting the repository name; StoryLine keeps research, corkboard notes, characters and locations in that vault beside the scenes, so the reference material is in view while you write. The skill enables the plugin in the vault but doesn't install it: Obsidian does, from Community plugins.
 
 For a series, StoryLine shares one Codex across the books. The generated `CLAUDE.md` then keeps cross-book items — plot threads, mysteries, foreshadowing — as entries in custom categories of that shared Codex, which scenes in any book link to. The series itself is still created in StoryLine, with **Create Series from Current Project**.
 
@@ -89,7 +89,7 @@ kinds/NAME/
 ├── CLAUDE.md                ## section, loaded every session, for rules that hold for the whole kind
 ├── context/…                sections appended to base context files, or new context files
 ├── docs/…                   sections appended to docs/index.md, or extra docs folders
-└── VAULT/…                  a vault the kind declares, e.g. writing's manuscript/.obsidian/
+└── VAULT/…                  a vault the kind declares, e.g. writing's project-named vault `.obsidian/`
 ```
 
 Base templates stay kind-neutral. Text that depends on the docs vault or on pull requests sits in `{{#docs}}…{{/docs}}` or `{{#pull_requests}}…{{/pull_requests}}` sections, with `{{^flag}}` for the opposite. A stack can declare its own flags in `stack.md`'s `flags` field, as `storyline` does with `series`; its notes say how each is decided, and a `NAME=yes|no` argument sets it.
