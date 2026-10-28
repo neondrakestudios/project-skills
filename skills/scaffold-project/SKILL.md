@@ -35,7 +35,7 @@ These override anything below that seems to conflict.
 Work at the git root (`git rev-parse --show-toplevel`). If the directory isn't a git repository, step 5 offers to initialize it; until then, work in the current directory. Record:
 
 - Whether `CLAUDE.md`, `context/`, `docs/`, `.gitignore`, `README*` and `.claude/context-templates/` exist.
-- **Empty or not.** The repo is *empty* when it has no file outside `.git/`, `.claude/`, `context/`, `docs/`, the vault directories any available kind declares (`manuscript/`), other dot-directories (`.github/`, `.vscode/`, `.idea/`…), `CLAUDE.md`, `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` and `.editorconfig`.
+- **Empty or not.** The repo is *empty* when it has no file outside `.git/`, `.claude/`, `context/`, `docs/`, the vault directories recorded in `CLAUDE.md` or declared by the selected kind, other dot-directories (`.github/`, `.vscode/`, `.idea/`…), `CLAUDE.md`, `README*`, `LICENSE*`, `.gitignore`, `.gitattributes` and `.editorconfig`.
 - **Scaffolded or not.** The repo is *scaffolded* when `CLAUDE.md` contains a `**Stacks:**` line.
 - Default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`), else the current branch, else `main`.
 - `project_name`: the solution or package name, else the repository directory name.
@@ -49,6 +49,11 @@ Resolve in this order: the org source, then the available kinds and stacks (step
 - **Scaffolded:** the `**Kind:**` line in `CLAUDE.md`; with no such line, `software`. A `kind=` that differs stops the run before anything is written: a repo's kind never changes.
 - **Not scaffolded:** the `kind=` argument; otherwise `software` when the repo isn't empty; otherwise the `kind` of the stacks named in `stacks=`, when they all share one; otherwise ask. When you cannot ask, use `software` and report it.
 - An unknown kind name stops the run before anything is written.
+
+**Writing vault** — only for the `writing` kind. It is the single root folder Obsidian opens as the vault, and is recorded as `**Writing vault:**` in the generated Writing section:
+
+- **Scaffolded:** use the recorded value. For a writing repo scaffolded before this field existed, use `manuscript` when that folder exists; otherwise use `project_name`. Do not add the field on a re-run; report the legacy assumption under "Needs your decision".
+- **Not scaffolded:** ask for the folder name after the kind is chosen, offering `project_name` as the default. It must be one root folder name: non-empty, with no `/`, `\`, `.` or `..` path segments. When you cannot ask, use `project_name` and report it.
 
 **Stacks:**
 
@@ -65,7 +70,7 @@ Resolve in this order: the org source, then the available kinds and stacks (step
 - **Scaffolded:** the `**Docs vault:**` line in `CLAUDE.md`; with no such line, `yes`. A `docs=` that differs stops the run before anything is written.
 - **Not scaffolded:** the `docs=` argument; otherwise `yes` when `docs/` already exists; otherwise the kind's `docs` field — `yes`, `no`, or `ask`. When asked and you cannot ask, `yes`.
 
-**Asking** (never in a dry run): ask the kind first, alone — one single-select question, one option per available kind labelled with its `kind.md` title and described by the first sentence of its body. Then ask, in one AskUserQuestion call, the docs vault question when the kind says `ask` (yes or no, describing that without it decisions live as rows in `context/DECISIONS.md`) and the stacks. Ask for every stack the project will use — a repo commonly has more than one, such as .NET with Angular — using `multiSelect: true` questions, one option per available stack of the chosen kind, labelled with its `stack.md` title and sorted by title. A stack's kind is its `stack.md` `kind` field, `software` when absent; `stacks=` may still name a stack of any kind. A call holds at most four questions of at most four options, so split the stacks across questions headed "Stacks 1/N", "Stacks 2/N" and so on, across further calls if needed; the answer is the union of every selection. Only past sixteen stacks, ask in plain text listing all of them. A kind with no stacks skips the stacks question and records `none`.
+**Asking** (never in a dry run): ask the kind first, alone — one single-select question, one option per available kind labelled with its `kind.md` title and described by the first sentence of its body. For the writing kind, then ask for the writing-vault folder name, offering `project_name` as the default. Then ask, in one AskUserQuestion call, the docs vault question when the kind says `ask` (yes or no, describing that without it decisions live as rows in `context/DECISIONS.md`) and the stacks. Ask for every stack the project will use — a repo commonly has more than one, such as .NET with Angular — using `multiSelect: true` questions, one option per available stack of the chosen kind, labelled with its `stack.md` title and sorted by title. A stack's kind is its `stack.md` `kind` field, `software` when absent; `stacks=` may still name a stack of any kind. A call holds at most four questions of at most four options, so split the stacks across questions headed "Stacks 1/N", "Stacks 2/N" and so on, across further calls if needed; the answer is the union of every selection. Only past sixteen stacks, ask in plain text listing all of them. A kind with no stacks skips the stacks question and records `none`.
 
 ## 2. Resolve templates
 
@@ -84,6 +89,7 @@ Resolution:
 - **Overlays are additive.** The chosen kind's overlay, `kinds/NAME/`, is applied first, then each chosen stack's, `stacks/NAME/`, in the order listed. Each winning file in an overlay targets the same relative path in the output:
   - Files at the overlay's root other than `CLAUDE.md` and `gitignore-fragment` — `kind.md`, `stack.md`, and data files a stack's notes use, like `solution-items.yaml` — are metadata. Never write them.
   - `CLAUDE.md` fills the `{{kind_section}}` slot of the base `CLAUDE.md` for a kind, and the `{{stack_sections}}` slot for a stack.
+- A kind's `vaults` and `slots` values may themselves contain slots. Render them after their derived slots are available; `writing` uses `{{writing_vault}}` this way.
   - A path that also exists as a base file is appended to it. `gitignore-fragment` always is.
   - Any other path is a new file.
 - **No docs vault:** when the docs vault is `no`, drop every output path under `docs/`, from every layer, and say so in the report.
@@ -161,8 +167,9 @@ Slots are `{{name}}`. Fill each from evidence, in this order of preference: the 
 Derived and kind-wide slots:
 
 - `kind`: the kind's directory name.
-- `vault_intro`: the vaults are `context/`, `docs/` when the docs vault is `yes`, and those the kind's `vaults` field declares. With one, write: This repo keeps one Obsidian vault, `context/`, at the root. With more: This repo keeps N Obsidian vaults as siblings at the root. They are never nested. — N spelled out, `two` or `three`.
-- `wikilink_vaults`: every vault but `context/`, as code spans joined with "and" — `` `docs/` `` or `` `docs/` and `manuscript/` ``.
+- `writing_vault`: for the writing kind, from step 1; empty for every other kind.
+- `vault_intro`: the vaults are `context/`, `docs/` when the docs vault is `yes`, and the resolved values in the kind's `vaults` field. With one, write: This repo keeps one Obsidian vault, `context/`, at the root. With more: This repo keeps N Obsidian vaults as siblings at the root. They are never nested. — N spelled out, `two` or `three`.
+- `wikilink_vaults`: every vault but `context/`, as code spans joined with "and" — `` `docs/` `` or `` `docs/` and `{{writing_vault}}/` ``.
 - `docs_vault`: `yes` or `no`.
 - `change_unit`: `PR` when `pull_requests`, else `commit`.
 - `history`: where history lives — `git, PRs and ADRs`, `git and PRs`, `git and ADRs` or `git`, by `pull_requests` and `docs`.
@@ -185,7 +192,7 @@ For a new `CONVENTIONS.md` on a repo with code, replace a heading's `<!-- -->` g
 
 ## 8. Write
 
-Create `context/` at the root, `docs/` beside it when the docs vault is `yes`, and each vault the kind's `vaults` field declares — siblings, never one inside another — each with its `.obsidian/` from the templates. Then, for every resolved output path:
+Create `context/` at the root, `docs/` beside it when the docs vault is `yes`, and each resolved vault the kind's `vaults` field declares — siblings, never one inside another — each with its `.obsidian/` from the templates. Then, for every resolved output path:
 
 **Heading matching**, used throughout: `##` headings match case-insensitively, and match when either one starts with the other — `Git Workflow and Branching` matches `Git workflow and branching`, `Stack and tooling` matches `Stack`. Wherever this step says "the X section", it means the section whose heading matched the template's X heading.
 
@@ -197,9 +204,9 @@ Create `context/` at the root, `docs/` beside it when the docs vault is `yes`, a
   4. Additions a chosen stack's `stack.md` notes define for a file the stack's tools own, such as .NET solution items. Apply them on every run, only ever adding entries, and report what was added.
   5. The one conversion a stack's notes define for project files its generators created in this same run, such as moving .NET package versions into `Directory.Packages.props`. Never apply it to files that existed before the run.
 
-**Existing CLAUDE.md never scaffolded** (no `**Stacks:**` line): keep every line of it. Append each `##` section of the generated `CLAUDE.md` whose heading it lacks. For each heading it already has, keep its version and report the section as a conflict with a one-line description of the difference. If it already has a Stack section, insert the `**Kind:**`, `**Stacks:**`, `**Docs vault:**` and `**Org templates:**` lines at the top of that section, and append each chosen stack's `CLAUDE.md` fragment at its end unless the section already contains that fragment's first heading. Either way the file must end up with a `**Stacks:**` line — without it, the next run cannot tell the repo was scaffolded.
+**Existing CLAUDE.md never scaffolded** (no `**Stacks:**` line): keep every line of it. Append each `##` section of the generated `CLAUDE.md` whose heading it lacks. For each heading it already has, keep its version and report the section as a conflict with a one-line description of the difference. If it already has a Stack section, insert the `**Kind:**`, `**Stacks:**`, `**Docs vault:**` and `**Org templates:**` lines at the top of that section, and append each chosen stack's `CLAUDE.md` fragment at its end unless the section already contains that fragment's first heading. For the writing kind, if it already has a Writing section, insert `**Writing vault:** {{writing_vault}}` at the top of that section; otherwise the generated Writing section includes it. Either way the file must end up with a `**Stacks:**` line — without it, the next run cannot tell the repo was scaffolded.
 
-**Existing CLAUDE.md already scaffolded:** do not add sections, even ones the template has and the file lacks — they may have been removed deliberately. Report each such missing section, and each policy section whose text differs from the current template, so template changes surface without being forced. A policy section is one with no repo slots — only flags and derived or kind-wide slots — and is compared after rendering those with this repo's values. Sections built from repo slots are expected to differ; don't report them. A file with no `**Kind:**` or `**Docs vault:**` line predates kinds: use the defaults from step 1, don't add the lines, and list them under "Needs your decision".
+**Existing CLAUDE.md already scaffolded:** do not add sections, even ones the template has and the file lacks — they may have been removed deliberately. Report each such missing section, and each policy section whose text differs from the current template, so template changes surface without being forced. A policy section is one with no repo slots — only flags and derived or kind-wide slots — and is compared after rendering those with this repo's values. Sections built from repo slots are expected to differ; don't report them. A file with no `**Kind:**` or `**Docs vault:**` line predates kinds: use the defaults from step 1, don't add the lines, and list them under "Needs your decision". A writing file with no `**Writing vault:**` line is likewise legacy: use the step 1 value without adding the line, and list it under "Needs your decision".
 
 **PROJECT_STATE.md**, only when creating it: seed it with facts true today — the scaffold date as an absolute date, the kind, the stacks, which generators ran, the default branch, open PR count (`gh pr list --state open --base {{default_branch}}`) when the workflow uses pull requests and there is a GitHub remote, and whether CI config exists. A section with nothing true yet says "None yet." Never write aspirational or placeholder prose.
 
@@ -213,7 +220,7 @@ Offer to commit everything this run wrote, including generator output, on the wo
 
 Print, in this order, omitting empty sections:
 
-1. **Kind, stacks, docs vault and stack flags** — each with how it was determined (recorded, argument, inferred from `<file>`, kind default, asked).
+1. **Kind, writing vault, stacks, docs vault and stack flags** — each with how it was determined (recorded, argument, inferred from `<file>`, kind default, asked).
 2. **Git workflow** — each value and how it was determined (existing section, override file, inferred from `<evidence>`, kind default, asked).
 3. **Repository** — identity, branches created or tracked, the work branch, each commit made, the current branch, and the push commands for every new branch plus, when the workflow uses pull requests, the pull request to open from the work branch into the integration branch.
 4. **Created** — new paths. A new file is listed here only, however many layers contributed to it; its contributors are in Provenance.

@@ -10,5 +10,6 @@ Map of content. `README.md` at the repo root covers install and usage.
 - [[ADR-0005-plugin-naming|ADR-0005]] Plugin and marketplace naming
 - [[ADR-0006-repository-setup|ADR-0006]] Set up the git repository and scaffold on a work branch
 - [[ADR-0007-generators-first|ADR-0007]] Hand-generate project files only when no official generator is available
-- [[ADR-0008-project-kinds|ADR-0008]] Project kinds — one kind overlay beneath the stacks
+- [[ADR-0008-project-kinds|ADR-0008]] Project kinds — one kind overlay beneath the stacks (superseded by ADR-0010)
 - [[ADR-0009-optional-docs-vault|ADR-0009]] Two sibling vaults, the docs vault optional
+- [[ADR-0010-project-kinds-and-named-writing-vault|ADR-0010]] Project kinds and named writing vaults

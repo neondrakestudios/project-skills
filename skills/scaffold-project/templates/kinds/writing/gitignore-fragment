@@ -1,4 +1,4 @@
-# Obsidian: per-user UI state in the manuscript vault
-manuscript/.obsidian/workspace*
-manuscript/.obsidian/cache
-manuscript/.trash/
+# Obsidian: per-user UI state in the writing vault
+{{writing_vault}}/.obsidian/workspace*
+{{writing_vault}}/.obsidian/cache
+{{writing_vault}}/.trash/
